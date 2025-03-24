@@ -201,26 +201,35 @@ def decrypt_ecc(data, original_message):
         return f"Verification failed: {e}"  # Devuelve un mensaje de fallo con el error
 
 
-def benchmark_algorithms(plaintext):
+def benchmark_algorithms(plaintext, plaintext1):
+    anio_nacimiento = int(input(Fore.BLUE + "Ingrese su año de nacimiento: "))
+
+    # Definir los algoritmos
     algorithms = [
+        ("ASCII", 
+            lambda text: encriptar_ascii(text, anio_nacimiento),  # Usar plaintext1 para ASCII
+            lambda text: desencriptar_ascii(text, anio_nacimiento)),  # Lo mismo para desencriptar ASCII
         ("ECC", encrypt_ecc, decrypt_ecc),
         ("ChaCha20-Poly1305", encrypt_chacha20, decrypt_chacha20),
         ("AES-GCM", encrypt_aes, decrypt_aes),
         ("Blowfish", encrypt_blowfish, decrypt_blowfish),
         ("RSA", encrypt_rsa, decrypt_rsa)
     ]
-    results = [measure_algorithm(name, enc, dec, plaintext) for name, enc, dec in algorithms]
 
+    # Medir el tiempo y recursos para cada algoritmo
+    results = [measure_algorithm(name, enc, dec, plaintext if name != "ASCII" else plaintext1) for name, enc, dec in algorithms]
 
+    # Mapear colores para cada algoritmo
     color_map = {
         "ChaCha20-Poly1305": Fore.GREEN,
         "AES-GCM": Fore.YELLOW,
         "Blowfish": Fore.MAGENTA,
         "RSA": Fore.CYAN,
-        "ECC": Fore.BLUE
+        "ECC": Fore.BLUE,
+        "ASCII": Fore.WHITE
     }
 
-# Aplicar colores a los resultados
+    # Aplicar colores a los resultados
     colored_results = []
     for row in results:
         algorithm = row[0]
@@ -228,15 +237,17 @@ def benchmark_algorithms(plaintext):
         colored_row = [color + str(item) + Style.RESET_ALL for item in row]  # Aplicar color a cada celda
         colored_results.append(colored_row)
 
-# Encabezados en negrita y azul
-    headers = [Fore.RED + Style.BRIGHT + h + Style.RESET_ALL for h in ["Algorithm", "Total Time", "Avg Time/Iter", "Memory Used", "CPU Load"]]
+    # Encabezados en negrita y rojo
+    headers = [Fore.RED + Style.BRIGHT + h + Style.RESET_ALL for h in 
+               ["Algorithm", "Total Time", "Avg Time/Iter", "Memory Used", "CPU Load"]]
 
-# Imprimir la tabla con colores
-    print(tabulate(colored_results, headers=headers, tablefmt="fancy_grid", stralign="center", numalign="center", colalign=("center", "center", "center", "center", "center")))
-
-
+    # Imprimir la tabla con colores
+    print(tabulate(colored_results, headers=headers, tablefmt="fancy_grid", 
+                   stralign="center", numalign="center", colalign=("center", "center", "center", "center", "center")))
 
     input(Fore.YELLOW + "Presione Enter para continuar..." + Style.RESET_ALL)
+
+
 
 def encriptar(palabra, anio_nacimiento):
     """Convierte cada carácter en su valor ASCII y resta el año de nacimiento."""
@@ -263,6 +274,44 @@ def ascci():
 
     input(Fore.YELLOW + "\nPresione Enter para continuar..." + Style.RESET_ALL)
 
+def encriptar_ascii(plaintext, anio_nacimiento):
+    """
+    Convierte cada carácter del texto en su valor ASCII y resta el año de nacimiento.
+    Funciona con texto de archivo y caracteres especiales o chinos.
+    """
+    if isinstance(plaintext, str):  # Asegurarse de que la entrada es un string
+        # Convertir la cadena a bytes usando UTF-8, para manejar caracteres especiales y chinos
+        plaintext_bytes = plaintext.encode('utf-8')
+        
+        # Encriptar: Convertir cada byte en su valor ASCII y restar el año de nacimiento
+        return [byte - anio_nacimiento for byte in plaintext_bytes]
+    else:
+        raise TypeError("La entrada debe ser una cadena de texto.")
+
+
+def desencriptar_ascii(encrypted_values, anio_nacimiento):
+    """
+    Suma el año de nacimiento a cada valor en la lista encriptada para obtener los caracteres originales.
+    Reconstruye la cadena de texto original (incluyendo caracteres especiales y chinos).
+    """
+    if isinstance(encrypted_values, list) and all(isinstance(i, int) for i in encrypted_values):
+        # Desencriptar: Convertir cada valor de la lista de vuelta a bytes, luego decodificarlo
+        plaintext_bytes = bytes([num + anio_nacimiento for num in encrypted_values])
+        
+        # Convertir los bytes a cadena de texto usando UTF-8
+        return plaintext_bytes.decode('utf-8')
+    else:
+        raise TypeError("La entrada debe ser una lista de enteros.")
+
+def read_file1(filename):
+    """
+    Lee el contenido de un archivo y lo devuelve como un string.
+    """
+    with open(filename, 'r', encoding='utf-8') as file:
+        return file.read()
+
+
+
 
 def main():
     colorama.init()
@@ -270,6 +319,8 @@ def main():
     
     filename = input(Fore.YELLOW + "Ingrese el nombre del archivo a encriptar: " + Style.RESET_ALL)
     plaintext = read_file(filename)
+    plaintext1 = read_file1(filename)
+    
     
     while True:
         clear_screen()
@@ -284,7 +335,7 @@ def main():
             print(Fore.RED + "Saliendo..." + Style.RESET_ALL)
             break
         elif choice == "1":
-            benchmark_algorithms(plaintext)
+            benchmark_algorithms(plaintext, plaintext1)
         elif choice == "2":
             ascci();
         else:
